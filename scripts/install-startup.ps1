@@ -6,12 +6,13 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$StartupFileName = "AC Controller.bat"
 
 function Write-Status {
     param([string]$Message, [string]$Type = "Info")
     switch ($Type) {
-        "Success" { Write-Host "✓ $Message" -ForegroundColor Green }
-        "Error" { Write-Host "✗ $Message" -ForegroundColor Red }
+        "Success" { Write-Host "[OK] $Message" -ForegroundColor Green }
+        "Error" { Write-Host "[ERROR] $Message" -ForegroundColor Red }
         default { Write-Host $Message }
     }
 }
@@ -20,7 +21,7 @@ function Install-ACControllerStartup {
     Write-Host "`nAC Controller Startup Installation" -ForegroundColor Blue
     
     # Get project directory
-    $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+    $scriptDir = Split-Path -Parent $PSCommandPath
     $projectDir = Resolve-Path (Join-Path $scriptDir "..")
     Write-Host "Project: $projectDir"
     
@@ -60,10 +61,10 @@ function Install-ACControllerStartup {
     $startupBatPath = Join-Path $projectDir "start-ac-controller.bat"
     Write-Host "Creating startup file..."
     
-    $batContent = @"
+    $batContent = @'
 @echo off
 echo Starting AC Controller...
-cd /d "$projectDir"
+cd /d "PROJECTDIR"
 
 if not exist ".env" (
     echo ERROR: .env file not found. Please create it with your Sensibo credentials.
@@ -73,13 +74,22 @@ if not exist ".env" (
 
 npm start
 if errorlevel 1 pause
-"@
+'@
+    
+    # Replace placeholder with actual project directory
+    $batContent = $batContent.Replace("PROJECTDIR", $projectDir)
     
     $batContent | Out-File -FilePath $startupBatPath -Encoding ASCII -Force
     
-    # Add to Windows startup
+    # Check if already installed
     $startupFolder = [Environment]::GetFolderPath("Startup")
-    $startupLinkPath = Join-Path $startupFolder "AC Controller.bat"
+    $startupLinkPath = Join-Path $startupFolder $StartupFileName
+    
+    if (Test-Path $startupLinkPath) {
+        Write-Status "AC Controller is already installed in Windows startup" -Type "Success"
+        Write-Host "To reinstall, run: scripts\install-startup.ps1 -Uninstall first"
+        return
+    }
     
     try {
         Copy-Item $startupBatPath $startupLinkPath -Force
@@ -99,7 +109,7 @@ if errorlevel 1 pause
 
 function Test-ACControllerStartup {
     Write-Host "`nTesting AC Controller..." -ForegroundColor Blue
-    $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+    $scriptDir = Split-Path -Parent $PSCommandPath
     $projectDir = Resolve-Path (Join-Path $scriptDir "..")
     $startupBatPath = Join-Path $projectDir "start-ac-controller.bat"
     
@@ -116,7 +126,7 @@ function Uninstall-ACControllerStartup {
     Write-Host "`nUninstalling AC Controller..." -ForegroundColor Blue
     
     $startupFolder = [Environment]::GetFolderPath("Startup")
-    $startupLinkPath = Join-Path $startupFolder "AC Controller.bat"
+    $startupLinkPath = Join-Path $startupFolder $StartupFileName
     
     if (Test-Path $startupLinkPath) {
         Remove-Item $startupLinkPath -Force
