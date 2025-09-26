@@ -41,6 +41,7 @@ SENSIBO_API_KEY=your_api_key_here
 SENSIBO_DEVICE_ID=your_device_id_here
 MIN_TEMP=16
 MAX_TEMP=30
+VOICE_VOLUME=30
 LOG_LEVEL=info
 ```
 
@@ -103,6 +104,7 @@ Edit the `.env` file to customize:
 
 - `MIN_TEMP`: Minimum allowed temperature (default: 16°C)
 - `MAX_TEMP`: Maximum allowed temperature (default: 30°C)
+- `VOICE_VOLUME`: Voice feedback volume level 0-100 (default: 30 for low volume)
 - `LOG_LEVEL`: Logging verbosity (`debug`, `info`, `warn`, `error`)
 - `SENSIBO_API_URL`: Custom API endpoint (optional)
 
@@ -117,11 +119,14 @@ Edit the `.env` file to customize:
 - Windows SAPI (Speech API) must be installed
 - Check Windows sound settings
 - Ensure speakers/headphones are connected
+- Adjust `VOICE_VOLUME` in `.env` file (0-100 scale, default: 30)
+- Set `VOICE_VOLUME=0` to mute voice feedback completely
+- Set `VOICE_VOLUME=100` for maximum volume (not recommended)
 
 ### API connection errors
 - Verify your API key and device ID are correct
 - Check internet connection
-- Look at the logs in `ac-controller.log` for detailed error messages
+- Look at the logs in `./logs/ac-controller.log` for detailed error messages
 
 ## Project Structure
 

@@ -29,7 +29,7 @@ export class SensiboAPI {
       });
       
       const currentState = response.data.result[0];
-      this.logger.info('Current AC state retrieved', currentState);
+      this.logger.debug('Current AC state retrieved', currentState);
       return currentState.acState;
     } catch (error) {
       this.logger.error('Failed to get current state:', error);

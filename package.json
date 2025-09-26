@@ -22,8 +22,8 @@
     "axios": "^1.12.2",
     "dotenv": "^17.2.2",
     "node-global-key-listener": "^0.3.0",
-    "say": "^0.16.0",
-    "winston": "^3.17.0"
+    "winston": "^3.17.0",
+    "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^24.5.2",

@@ -1,4 +1,4 @@
-import { GlobalKeyboardListener, IGlobalKeyEvent, IGlobalKeyDownMap } from 'node-global-key-listener';
+import { GlobalKeyboardListener, IGlobalKeyEvent } from 'node-global-key-listener';
 import winston from 'winston';
 import { EventEmitter } from 'events';
 
@@ -26,8 +26,6 @@ export class KeyboardListener extends EventEmitter {
   private setupListeners(): void {
     this.listener.addListener((event: IGlobalKeyEvent) => {
       const keyName = event.name || event.rawKey?.name || 'UNKNOWN';
-      this.logger.debug(`Key event: ${keyName} - ${event.state}`);
-      
       if (event.state === 'DOWN') {
         this.handleKeyDown(keyName);
       } else if (event.state === 'UP') {
@@ -49,17 +47,17 @@ export class KeyboardListener extends EventEmitter {
       this.altPressed = true;
     }
 
-    // CTRL + Pause - Toggle AC
-    if (this.ctrlPressed && !this.altPressed && key === 'PAUSE') {
-      this.logger.info('Toggle AC hotkey detected');
+    // CTRL + Pause - Toggle AC (appears as CANCEL when CTRL is pressed)
+    if (this.ctrlPressed && !this.altPressed && (key === 'PAUSE' || key === 'CANCEL')) {
+      this.logger.info('Toggle AC hotkey detected (CTRL+Pause)');
       this.emit('toggle');
       this.temperatureBuffer = [];
       return;
     }
 
-    // ALT + Pause - Voice status
+    // ALT + Pause - Voice status (appears as PAUSE when ALT is pressed)
     if (this.altPressed && !this.ctrlPressed && key === 'PAUSE') {
-      this.logger.info('Voice status hotkey detected');
+      this.logger.info('Voice status hotkey detected (ALT+Pause)');
       this.emit('voiceStatus');
       this.temperatureBuffer = [];
       return;

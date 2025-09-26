@@ -1,26 +1,45 @@
 import dotenv from 'dotenv';
 import winston from 'winston';
+import 'winston-daily-rotate-file';
 import { SensiboAPI } from './sensibo-api.js';
 import { KeyboardListener } from './keyboard-listener.js';
 import { VoiceFeedback } from './voice.js';
 import { SensiboConfig } from './types.js';
+import path from 'path';
 
 // Load environment variables
 dotenv.config();
+
+// Configure daily rotating file transport
+const fileRotateTransport = new winston.transports.DailyRotateFile({
+  filename: path.join(process.cwd(), '.logs', 'ac-controller-%DATE%.log'),
+  datePattern: 'YYYY-MM-DD',
+  maxSize: '20m', // Rotate when file reaches 20MB
+  maxFiles: '14d', // Keep logs for 14 days
+  zippedArchive: true, // Compress rotated files
+});
 
 // Configure logger
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || 'info',
   format: winston.format.combine(
     winston.format.timestamp(),
-    winston.format.colorize(),
-    winston.format.printf(({ timestamp, level, message, ...args }) => {
-      return `${timestamp} [${level}]: ${message} ${Object.keys(args).length ? JSON.stringify(args, null, 2) : ''}`;
-    })
+    winston.format.errors({ stack: true }),
+    winston.format.json()
   ),
   transports: [
-    new winston.transports.Console(),
-    new winston.transports.File({ filename: 'ac-controller.log' }),
+    // Console transport with colorized output
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.simple(),
+        winston.format.printf(({ timestamp, level, message, ...args }) => {
+          return `${timestamp} [${level}]: ${message} ${Object.keys(args).length ? JSON.stringify(args, null, 2) : ''}`;
+        })
+      )
+    }),
+    // Daily rotating file transport
+    fileRotateTransport
   ],
 });
 
@@ -45,10 +64,13 @@ class ACController {
       maxTemp: parseInt(process.env.MAX_TEMP || '30', 10),
     };
 
+    // Get voice volume from environment (default to 30 for low volume)
+    const voiceVolume = parseInt(process.env.VOICE_VOLUME || '30', 10);
+
     // Initialize components
     this.sensiboAPI = new SensiboAPI(this.config, logger);
     this.keyboardListener = new KeyboardListener(logger);
-    this.voiceFeedback = new VoiceFeedback(logger);
+    this.voiceFeedback = new VoiceFeedback(logger, voiceVolume);
   }
 
   private validateEnvironment(): void {
