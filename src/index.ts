@@ -10,6 +10,9 @@ import path from 'path';
 // Load environment variables
 dotenv.config();
 
+// Set custom process title for easy identification in Task Manager
+process.title = 'AC Controller';
+
 // Configure daily rotating file transport
 const fileRotateTransport = new winston.transports.DailyRotateFile({
   filename: path.join(process.cwd(), '.logs', 'ac-controller-%DATE%.log'),

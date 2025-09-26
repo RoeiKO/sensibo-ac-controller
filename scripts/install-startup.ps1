@@ -64,17 +64,15 @@ function Install-ACControllerStartup {
     
     $batContent = @'
 @echo off
-echo Starting AC Controller...
 cd /d "PROJECTDIR"
 
 if not exist ".env" (
     echo ERROR: .env file not found. Please create it with your Sensibo credentials.
-    pause
+    timeout /t 10 /nobreak >nul
     exit /b 1
 )
 
-npm start
-if errorlevel 1 pause
+npm start >nul 2>&1
 '@
     
     # Replace placeholder with actual project directory
@@ -99,13 +97,15 @@ if errorlevel 1 pause
         Write-Host "1. Create .env file with your Sensibo credentials"
         Write-Host "2. (optional) Run manually with: scripts\install-startup.ps1 -Run"
         Write-Host "3. (optional) Restart Windows to verify auto-start"
+        Write-Host "4. Check Task Manager for 'AC Controller' process when running"
         
         # Ask if user wants to run it now
         Write-Host ""
         $runNow = Read-Host "Start AC Controller in the background now? (y/N)"
         if ($runNow -eq "y" -or $runNow -eq "Y") {
-            Write-Host "`nStarting AC Controller..."
-            Start-Process -FilePath $startupBatPath -WindowStyle Normal
+            Write-Host "`nStarting AC Controller in background..."
+            Start-Process -FilePath $startupBatPath -WindowStyle Hidden
+            Write-Host "[OK] AC Controller started in background"
         }
     }
     catch {
@@ -132,9 +132,14 @@ function Start-ACControllerService {
     $startupBatPath = Join-Path $scriptDir "start-ac-controller.bat"
     
     if (Test-Path $startupBatPath) {
+        Write-Host "Starting AC Controller in terminal..."
         Write-Host "Press Ctrl+C to stop the AC Controller"
-        Start-Sleep 2
-        & cmd.exe /c "$startupBatPath"
+        Write-Host ""
+        
+        # Run directly with visible output
+        Push-Location $projectDir
+        & npm start
+        Pop-Location
     } else {
         Write-Status "Startup file not found. Run installation first." -Type "Error"
     }
