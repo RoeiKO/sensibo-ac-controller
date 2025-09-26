@@ -12,3 +12,6 @@ Thumbs.db
 .idea/
 .claude/
 settings.local.json
+
+# Generated startup script
+scripts/start-ac-controller.bat

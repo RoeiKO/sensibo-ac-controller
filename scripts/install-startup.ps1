@@ -1,12 +1,12 @@
 # AC Controller Startup Installation Script
 
 param(
-    [switch]$Test,
+    [switch]$Run,
     [switch]$Uninstall
 )
 
 $ErrorActionPreference = "Stop"
-$StartupFileName = "AC Controller.bat"
+$StartupFileName = "ac-controller.bat"
 
 function Write-Status {
     param([string]$Message, [string]$Type = "Info")
@@ -20,16 +20,17 @@ function Write-Status {
 function Install-ACControllerStartup {
     Write-Host "`nAC Controller Startup Installation" -ForegroundColor Blue
     
-    # Get project directory
-    $scriptDir = Split-Path -Parent $PSCommandPath
-    $projectDir = Resolve-Path (Join-Path $scriptDir "..")
-    Write-Host "Project: $projectDir"
-    
-    # Verify project
-    if (-not (Test-Path (Join-Path $projectDir "package.json"))) {
-        Write-Status "package.json not found" -Type "Error"
+    # Enforce running from project root
+    if (-not (Test-Path "package.json")) {
+        Write-Status "Must run from project root directory!" -Type "Error"
+        Write-Host "Current location: $(Get-Location)"
+        Write-Host "Please run: .\scripts\install-startup.ps1"
         exit 1
     }
+    
+    $projectDir = Get-Location
+    $scriptDir = Join-Path $projectDir "scripts"
+    Write-Host "Project: $projectDir"
     
     # Check Node.js
     try {
@@ -57,8 +58,8 @@ function Install-ACControllerStartup {
         Pop-Location
     }
     
-    # Create startup batch file
-    $startupBatPath = Join-Path $projectDir "start-ac-controller.bat"
+    # Create startup batch file in scripts folder
+    $startupBatPath = Join-Path $scriptDir "start-ac-controller.bat"
     Write-Host "Creating startup file..."
     
     $batContent = @'
@@ -96,8 +97,16 @@ if errorlevel 1 pause
         Write-Status "Successfully installed to Windows startup!" -Type "Success"
         Write-Host "`nNext steps:"
         Write-Host "1. Create .env file with your Sensibo credentials"
-        Write-Host "2. Test: scripts\install-startup.ps1 -Test"
-        Write-Host "3. Restart Windows to verify auto-start"
+        Write-Host "2. (optional) Run manually with: scripts\install-startup.ps1 -Run"
+        Write-Host "3. (optional) Restart Windows to verify auto-start"
+        
+        # Ask if user wants to run it now
+        Write-Host ""
+        $runNow = Read-Host "Start AC Controller in the background now? (y/N)"
+        if ($runNow -eq "y" -or $runNow -eq "Y") {
+            Write-Host "`nStarting AC Controller..."
+            Start-Process -FilePath $startupBatPath -WindowStyle Normal
+        }
     }
     catch {
         Write-Status "Failed to copy to startup folder" -Type "Error"
@@ -107,14 +116,23 @@ if errorlevel 1 pause
     }
 }
 
-function Test-ACControllerStartup {
-    Write-Host "`nTesting AC Controller..." -ForegroundColor Blue
-    $scriptDir = Split-Path -Parent $PSCommandPath
-    $projectDir = Resolve-Path (Join-Path $scriptDir "..")
-    $startupBatPath = Join-Path $projectDir "start-ac-controller.bat"
+function Start-ACControllerService {
+    Write-Host "`nStarting AC Controller..." -ForegroundColor Blue
+    
+    # Enforce running from project root
+    if (-not (Test-Path "package.json")) {
+        Write-Status "Must run from project root directory!" -Type "Error"
+        Write-Host "Current location: $(Get-Location)"
+        Write-Host "Please run: .\scripts\install-startup.ps1 -Run"
+        exit 1
+    }
+    
+    $projectDir = Get-Location
+    $scriptDir = Join-Path $projectDir "scripts"
+    $startupBatPath = Join-Path $scriptDir "start-ac-controller.bat"
     
     if (Test-Path $startupBatPath) {
-        Write-Host "Press Ctrl+C to stop test"
+        Write-Host "Press Ctrl+C to stop the AC Controller"
         Start-Sleep 2
         & cmd.exe /c "$startupBatPath"
     } else {
@@ -141,8 +159,8 @@ try {
     if ($Uninstall) {
         Uninstall-ACControllerStartup
     }
-    elseif ($Test) {
-        Test-ACControllerStartup
+    elseif ($Run) {
+        Start-ACControllerService
     }
     else {
         Install-ACControllerStartup

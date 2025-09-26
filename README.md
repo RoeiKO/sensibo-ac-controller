@@ -84,8 +84,8 @@ Use the PowerShell installation script:
 # Install to Windows startup
 scripts\install-startup.ps1
 
-# Test the installation
-scripts\install-startup.ps1 -Test
+# Run the AC Controller in your current terminal
+scripts\install-startup.ps1 -Run
 
 # Remove from startup
 scripts\install-startup.ps1 -Uninstall
