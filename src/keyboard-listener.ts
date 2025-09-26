@@ -1,4 +1,4 @@
-import { GlobalKeyboardListener } from 'node-global-key-listener';
+import { GlobalKeyboardListener, IGlobalKeyEvent, IGlobalKeyDownMap } from 'node-global-key-listener';
 import winston from 'winston';
 import { EventEmitter } from 'events';
 
@@ -24,28 +24,33 @@ export class KeyboardListener extends EventEmitter {
   }
 
   private setupListeners(): void {
-    this.listener.addListener((e: any) => {
-      if (e.state === 'DOWN') {
-        this.handleKeyDown(e.name);
-      } else if (e.state === 'UP') {
-        this.handleKeyUp(e.name);
+    this.listener.addListener((event: IGlobalKeyEvent) => {
+      const keyName = event.name || event.rawKey?.name || 'UNKNOWN';
+      this.logger.debug(`Key event: ${keyName} - ${event.state}`);
+      
+      if (event.state === 'DOWN') {
+        this.handleKeyDown(keyName);
+      } else if (event.state === 'UP') {
+        this.handleKeyUp(keyName);
       }
     });
   }
 
-  private handleKeyDown(keyName: string): void {
+  private handleKeyDown(keyName: string | number): void {
+    // Convert to string if it's a number (from IGlobalKey type)
+    const key = String(keyName).toUpperCase();
     const currentTime = Date.now();
     
     // Track modifier keys
-    if (keyName === 'LEFT CTRL' || keyName === 'RIGHT CTRL') {
+    if (key === 'LEFT CTRL' || key === 'RIGHT CTRL') {
       this.ctrlPressed = true;
     }
-    if (keyName === 'LEFT ALT' || keyName === 'RIGHT ALT') {
+    if (key === 'LEFT ALT' || key === 'RIGHT ALT') {
       this.altPressed = true;
     }
 
     // CTRL + Pause - Toggle AC
-    if (this.ctrlPressed && !this.altPressed && keyName === 'PAUSE') {
+    if (this.ctrlPressed && !this.altPressed && key === 'PAUSE') {
       this.logger.info('Toggle AC hotkey detected');
       this.emit('toggle');
       this.temperatureBuffer = [];
@@ -53,7 +58,7 @@ export class KeyboardListener extends EventEmitter {
     }
 
     // ALT + Pause - Voice status
-    if (this.altPressed && !this.ctrlPressed && keyName === 'PAUSE') {
+    if (this.altPressed && !this.ctrlPressed && key === 'PAUSE') {
       this.logger.info('Voice status hotkey detected');
       this.emit('voiceStatus');
       this.temperatureBuffer = [];
@@ -62,7 +67,7 @@ export class KeyboardListener extends EventEmitter {
 
     // CTRL + Numpad digits for temperature
     if (this.ctrlPressed && !this.altPressed) {
-      const numpadMatch = keyName.match(/^NUMPAD (\d)$/);
+      const numpadMatch = key.match(/^NUMPAD (\d)$/);
       if (numpadMatch) {
         const digit = numpadMatch[1];
         
@@ -87,9 +92,11 @@ export class KeyboardListener extends EventEmitter {
     }
   }
 
-  private handleKeyUp(keyName: string): void {
+  private handleKeyUp(keyName: string | number): void {
+    const key = String(keyName).toUpperCase();
+    
     // Release modifier keys
-    if (keyName === 'LEFT CTRL' || keyName === 'RIGHT CTRL') {
+    if (key === 'LEFT CTRL' || key === 'RIGHT CTRL') {
       this.ctrlPressed = false;
       // Clear temperature buffer when CTRL is released
       if (this.temperatureBuffer.length > 0) {
@@ -97,7 +104,7 @@ export class KeyboardListener extends EventEmitter {
         this.temperatureBuffer = [];
       }
     }
-    if (keyName === 'LEFT ALT' || keyName === 'RIGHT ALT') {
+    if (key === 'LEFT ALT' || key === 'RIGHT ALT') {
       this.altPressed = false;
     }
   }
