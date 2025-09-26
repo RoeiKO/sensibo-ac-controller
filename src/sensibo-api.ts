@@ -10,8 +10,9 @@ export class SensiboAPI {
     this.logger = logger;
     this.client = axios.create({
       baseURL: config.apiUrl,
+      timeout: 5000,
       headers: {
-        'Accept-Encoding': 'gzip',
+        'Accept-Encoding': 'gzip, deflate',
       },
       params: {
         apiKey: config.apiKey,
@@ -37,20 +38,16 @@ export class SensiboAPI {
     }
   }
 
-  async setACState(state: Partial<ACState>): Promise<void> {
+  async setACState(state: Partial<ACState>, currentState?: ACState): Promise<void> {
     try {
-      const currentState = await this.getCurrentState();
-      const newState = { ...currentState, ...state };
+      // Use provided current state to avoid redundant API call
+      const baseState = currentState || await this.getCurrentState();
+      const newState = { ...baseState, ...state };
       
       const response = await this.client.post(
         `/pods/${this.config.deviceId}/acStates`,
         {
           acState: newState,
-        },
-        {
-          params: {
-            apiKey: this.config.apiKey,
-          },
         }
       );
       
@@ -70,7 +67,8 @@ export class SensiboAPI {
       const currentState = await this.getCurrentState();
       const newPowerState = !currentState.on;
       
-      await this.setACState({ on: newPowerState });
+      // Pass current state to avoid redundant API call
+      await this.setACState({ on: newPowerState }, currentState);
       this.logger.info(`AC power toggled to: ${newPowerState ? 'ON' : 'OFF'}`);
       
       return newPowerState;

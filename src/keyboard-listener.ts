@@ -18,6 +18,7 @@ export class KeyboardListener extends EventEmitter {
   
   constructor(logger: winston.Logger) {
     super();
+    this.setMaxListeners(10); // Prevent memory leaks
     this.logger = logger;
     this.listener = new GlobalKeyboardListener();
     this.setupListeners();
@@ -51,7 +52,7 @@ export class KeyboardListener extends EventEmitter {
     if (this.ctrlPressed && !this.altPressed && (key === 'PAUSE' || key === 'CANCEL')) {
       this.logger.info('Toggle AC hotkey detected (CTRL+Pause)');
       this.emit('toggle');
-      this.temperatureBuffer = [];
+      this.temperatureBuffer.length = 0;
       return;
     }
 
@@ -59,7 +60,7 @@ export class KeyboardListener extends EventEmitter {
     if (this.altPressed && !this.ctrlPressed && key === 'PAUSE') {
       this.logger.info('Voice status hotkey detected (ALT+Pause)');
       this.emit('voiceStatus');
-      this.temperatureBuffer = [];
+      this.temperatureBuffer.length = 0;
       return;
     }
 
@@ -71,7 +72,7 @@ export class KeyboardListener extends EventEmitter {
         
         // Reset buffer if too much time has passed
         if (currentTime - this.lastKeyTime > 1000) {
-          this.temperatureBuffer = [];
+          this.temperatureBuffer.length = 0;
         }
         
         this.temperatureBuffer.push(digit);
@@ -84,7 +85,7 @@ export class KeyboardListener extends EventEmitter {
           const temperature = parseInt(this.temperatureBuffer.join(''), 10);
           this.logger.info(`Set temperature to ${temperature}°C`);
           this.emit('setTemperature', temperature);
-          this.temperatureBuffer = [];
+          this.temperatureBuffer.length = 0;
         }
       }
     }
@@ -99,7 +100,7 @@ export class KeyboardListener extends EventEmitter {
       // Clear temperature buffer when CTRL is released
       if (this.temperatureBuffer.length > 0) {
         this.logger.debug('CTRL released, clearing temperature buffer');
-        this.temperatureBuffer = [];
+        this.temperatureBuffer.length = 0; // Clear array efficiently
       }
     }
     if (key === 'LEFT ALT' || key === 'RIGHT ALT') {
@@ -108,8 +109,15 @@ export class KeyboardListener extends EventEmitter {
   }
 
   stop(): void {
-    this.listener.kill();
-    this.removeAllListeners();
-    this.logger.info('Keyboard listener stopped');
+    try {
+      this.listener.kill();
+      this.removeAllListeners();
+      this.temperatureBuffer.length = 0; // Clear buffer
+      this.ctrlPressed = false;
+      this.altPressed = false;
+      this.logger.info('Keyboard listener stopped');
+    } catch (error) {
+      this.logger.error('Error stopping keyboard listener:', error);
+    }
   }
 }

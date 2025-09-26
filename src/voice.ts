@@ -1,10 +1,11 @@
-import { exec, ChildProcess } from 'child_process';
+import { ChildProcess } from 'child_process';
 import winston from 'winston';
 
 export class VoiceFeedback {
   private logger: winston.Logger;
   private isSpeaking = false;
   private currentSpeechProcess: ChildProcess | null = null;
+  private currentProcessTimeout: NodeJS.Timeout | null = null;
   private volume: number; // Volume (0-100 scale)
   private rate = 1; // Speech rate (0 = slowest, 10 = fastest, default is 0)
 
@@ -14,20 +15,22 @@ export class VoiceFeedback {
     this.logger.info(`Voice feedback initialized with volume: ${this.volume}`);
   }
 
-  private createPowerShellCommand(text: string): string {
-    // Escape special characters for PowerShell
-    const escapedText = text
-      .replace(/"/g, '`"')
-      .replace(/'/g, "''")
-      .replace(/\$/g, '`$');
-    
-    // PowerShell command to speak with controlled volume
-    return `powershell -Command "Add-Type -AssemblyName System.speech; ` +
+  private createPowerShellCommand(): { command: string; args: string[] } {
+    // Use environment variable approach for safe parameter passing on Windows
+    const command = 'powershell';
+    const args = [
+      '-NoProfile',
+      '-ExecutionPolicy', 'Bypass',
+      '-Command',
+      `Add-Type -AssemblyName System.Speech; ` +
       `$speak = New-Object System.Speech.Synthesis.SpeechSynthesizer; ` +
       `$speak.Volume = ${this.volume}; ` +
       `$speak.Rate = ${this.rate}; ` +
-      `$speak.Speak('${escapedText}'); ` +
-      `$speak.Dispose();"`;
+      `$speak.Speak([System.Environment]::GetEnvironmentVariable('SPEECH_TEXT')); ` +
+      `$speak.Dispose();`
+    ];
+    
+    return { command, args };
   }
 
   speak(text: string): Promise<void> {
@@ -40,30 +43,53 @@ export class VoiceFeedback {
       this.isSpeaking = true;
       this.logger.info(`Speaking at volume ${this.volume}: ${text}`);
 
-      const command = this.createPowerShellCommand(text);
+      const { command, args } = this.createPowerShellCommand();
       
-      // Use exec instead of execAsync to get the child process
-      this.currentSpeechProcess = exec(command, { 
-        windowsHide: true,
-        timeout: 30000 // 30 second timeout
-      }, (error) => {
-        this.currentSpeechProcess = null;
-        this.isSpeaking = false;
-        
-        if (error) {
-          // Check if error is due to process being killed
-          if (error.killed || error.signal === 'SIGTERM') {
-            this.logger.debug('Speech was stopped');
-            resolve();
-          } else {
-            this.logger.error('Speech error:', error);
+      // Use spawn with separate arguments for security
+      import('child_process').then(({ spawn }) => {
+        this.currentSpeechProcess = spawn(command, args, {
+          windowsHide: true,
+          stdio: ['pipe', 'pipe', 'pipe'],
+          env: {
+            ...process.env,
+            SPEECH_TEXT: text // Pass text via environment variable to avoid injection
+          }
+        });
+
+        const currentProcess = this.currentSpeechProcess;
+
+        // Set timeout for THIS specific process with proper cleanup
+        this.currentProcessTimeout = setTimeout(() => {
+          if (this.currentSpeechProcess === currentProcess && !currentProcess.killed) {
+            this.logger.warn('Speech process timeout, terminating');
+            this.cleanupProcess(currentProcess, 'timeout');
+          }
+        }, 30000);
+
+        currentProcess.on('close', (code) => {
+          // Only handle if this is still the current process
+          if (this.currentSpeechProcess === currentProcess) {
+            this.cleanupCurrentProcess();
+            
+            if (code === 0 || code === null) {
+              this.logger.debug('Speech completed successfully');
+              resolve();
+            } else {
+              this.logger.error(`Speech process exited with code ${code}`);
+              reject(new Error(`Speech failed with exit code ${code}`));
+            }
+          }
+        });
+
+        currentProcess.on('error', (error) => {
+          // Only handle if this is still the current process
+          if (this.currentSpeechProcess === currentProcess) {
+            this.cleanupCurrentProcess();
+            this.logger.error('Speech process error:', error);
             reject(error);
           }
-        } else {
-          this.logger.debug('Speech completed');
-          resolve();
-        }
-      });
+        });
+      }).catch(reject);
     });
   }
 
@@ -100,11 +126,44 @@ export class VoiceFeedback {
 
   stop(): void {
     if (this.isSpeaking && this.currentSpeechProcess) {
-      // Kill the specific PowerShell process that's currently speaking
-      this.currentSpeechProcess.kill();
-      this.currentSpeechProcess = null;
-      this.isSpeaking = false;
-      this.logger.info('Voice feedback stopped');
+      this.logger.debug('Stopping current speech');
+      const processToKill = this.currentSpeechProcess;
+      this.cleanupProcess(processToKill, 'manual_stop');
+    }
+  }
+
+  private cleanupCurrentProcess(): void {
+    if (this.currentProcessTimeout) {
+      clearTimeout(this.currentProcessTimeout);
+      this.currentProcessTimeout = null;
+    }
+    this.currentSpeechProcess = null;
+    this.isSpeaking = false;
+  }
+
+  private cleanupProcess(process: ChildProcess, reason: 'timeout' | 'manual_stop'): void {
+    if (process && !process.killed) {
+      // Try graceful termination first
+      process.kill('SIGTERM');
+      
+      // Force kill after brief delay if process doesn't respond
+      const forceKillTimeout = setTimeout(() => {
+        if (process && !process.killed) {
+          this.logger.warn(`Force killing speech process (reason: ${reason})`);
+          process.kill('SIGKILL');
+        }
+      }, 1000); // Reduced to 1 second for faster cleanup
+
+      // Clean up the force kill timeout when process exits
+      process.once('exit', () => {
+        clearTimeout(forceKillTimeout);
+      });
+    }
+
+    // Clean up current process state if this is the active process
+    if (this.currentSpeechProcess === process) {
+      this.cleanupCurrentProcess();
+      this.logger.info(`Voice feedback stopped (reason: ${reason})`);
     }
   }
 }
