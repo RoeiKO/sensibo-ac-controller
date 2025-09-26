@@ -76,18 +76,37 @@ npm start
 
 ### Running at Startup
 
-To run the controller automatically when Windows starts:
+#### Automated Installation (Recommended)
 
-1. Create a batch file `start-ac-controller.bat`:
+Use the PowerShell installation script:
+
+```powershell
+# Install to Windows startup
+scripts\install-startup.ps1
+
+# Test the installation
+scripts\install-startup.ps1 -Test
+
+# Remove from startup
+scripts\install-startup.ps1 -Uninstall
+```
+
+The script will automatically:
+- Check Node.js and install dependencies
+- Build the project
+- Create startup batch file
+- Add to Windows startup folder
+
+#### Manual Installation
+
+1. Create `start-ac-controller.bat`:
 ```batch
 @echo off
 cd /d "C:\path\to\ac-controller"
 npm start
 ```
 
-2. Add to Windows startup:
-   - Press `Win + R`, type `shell:startup`
-   - Copy the batch file to the startup folder
+2. Press `Win + R`, type `shell:startup`, and copy the batch file there
 
 ## Keyboard Shortcuts
 
@@ -138,6 +157,8 @@ ac-controller/
 │   ├── keyboard-listener.ts # Global keyboard hook handler
 │   ├── voice.ts           # Text-to-speech feedback
 │   └── types.ts           # TypeScript type definitions
+├── scripts/
+│   └── install-startup.ps1 # Windows startup installation script
 ├── .env                   # Environment configuration (create from .env.example)
 ├── .env.example          # Example environment file
 ├── tsconfig.json         # TypeScript configuration
