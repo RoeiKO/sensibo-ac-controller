@@ -7,7 +7,7 @@ export class VoiceFeedback {
   private currentSpeechProcess: ChildProcess | null = null;
   private currentProcessTimeout: NodeJS.Timeout | null = null;
   private volume: number; // Volume (0-100 scale)
-  private rate = 1; // Speech rate (0 = slowest, 10 = fastest, default is 0)
+  private rate = 3; // Speech rate (0 = slowest, 10 = fastest, default is 0)
 
   constructor(logger: winston.Logger, volume: number = 30) {
     this.logger = logger;
@@ -94,13 +94,19 @@ export class VoiceFeedback {
   }
 
   async announceTemperatures(targetTemp: number, roomTemp: number): Promise<void> {
-    const message = `Target temperature: ${targetTemp} degrees. Current room temperature: ${Math.round(roomTemp)} degrees.`;
+    const roundedRoomTemp = Math.round(roomTemp);
+    if (targetTemp === roundedRoomTemp) {
+      await this.speak(`${roundedRoomTemp} degrees`);
+      return;
+    }
+    
+    const message = `Target ${targetTemp}. Room ${roundedRoomTemp}.`;
     await this.speak(message);
   }
 
   async announceACState(isOn: boolean, targetTemp: number): Promise<void> {
     const state = isOn ? 'on' : 'off';
-    const message = `AC is ${state}. Target temperature: ${targetTemp} degrees.`;
+    const message = `AC is ${state}. Target temperature: ${targetTemp}.`;
     await this.speak(message);
   }
 
