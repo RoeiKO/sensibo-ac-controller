@@ -89,12 +89,11 @@ npm start
 
 | Shortcut | Action | Example |
 |----------|--------|---------|
-| `CTRL + Pause` | Toggle AC on/off | Press and release |
 | `CTRL + 2 + 5` | Set temperature to 25°C | Hold CTRL, press 2, then 5 on numpad |
 | `CTRL + 1 + 8` | Set temperature to 18°C | Hold CTRL, press 1, then 8 on numpad |
-| `ALT + Pause` | Voice status announcement | Press and release |
-| `CTRL + ALT + 1` | Power on | Press and release |
-| `CTRL + ALT + 0` | Power off | Press and release |
+| `CTRL + . (del)` | Voice status announcement | -- |
+| `CTRL + ALT + 1` | Power on | -- |
+| `CTRL + ALT + 0` | Power off | -- |
 
 ## Configuration
 

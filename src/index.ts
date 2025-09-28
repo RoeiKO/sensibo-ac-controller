@@ -152,11 +152,10 @@ class ACController {
   async start(): Promise<void> {
     logger.info('Starting AC Controller...');
     logger.info('Keyboard shortcuts:');
-    logger.info('  CTRL + Pause: Toggle AC on/off');
     logger.info('  CTRL + ALT + Numpad 1: Turn AC on (with state sync)');
     logger.info('  CTRL + ALT + Numpad 0: Turn AC off (with state sync)');
     logger.info('  CTRL + Numpad digits (2 digits): Set temperature');
-    logger.info('  ALT + Pause: Voice status announcement');
+    logger.info('  CTRL + Numpad Period: Voice status announcement');
     logger.info('Press CTRL+C to exit');
 
     // Test API connection
@@ -177,22 +176,6 @@ class ACController {
   }
 
   private setupEventHandlers(): void {
-    // Toggle AC power
-    this.keyboardListener.on('toggle', async () => {
-      logger.info('Toggle command received');
-      
-      const newState = await this.withRetry(
-        () => this.sensiboAPI.togglePower(),
-        'Toggle power'
-      );
-      
-      if (newState !== null) {
-        const message = `AC turned ${newState ? 'on' : 'off'}`;
-        logger.info(message);
-        await this.voiceFeedback.announceSuccess(message);
-      }
-    });
-
     // Set temperature
     this.keyboardListener.on('setTemperature', async (temperature: number) => {
       logger.info(`Set temperature command received: ${temperature}°C`);

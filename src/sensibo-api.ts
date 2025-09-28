@@ -62,22 +62,6 @@ export class SensiboAPI {
     }
   }
 
-  async togglePower(): Promise<boolean> {
-    try {
-      const currentState = await this.getCurrentState();
-      const newPowerState = !currentState.on;
-      
-      // Pass current state to avoid redundant API call
-      await this.setACState({ on: newPowerState }, currentState);
-      this.logger.info(`AC power toggled to: ${newPowerState ? 'ON' : 'OFF'}`);
-      
-      return newPowerState;
-    } catch (error) {
-      this.logger.error('Failed to toggle power:', error);
-      throw new Error(`Failed to toggle power: ${error}`);
-    }
-  }
-
   async setTemperature(temperature: number): Promise<void> {
     if (temperature < this.config.minTemp || temperature > this.config.maxTemp) {
       throw new Error(`Temperature must be between ${this.config.minTemp} and ${this.config.maxTemp}`);

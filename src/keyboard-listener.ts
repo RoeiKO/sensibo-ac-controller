@@ -3,7 +3,6 @@ import winston from 'winston';
 import { EventEmitter } from 'events';
 
 export interface KeyboardEvents {
-  'toggle': void;
   'setTemperature': number;
   'voiceStatus': void;
   'powerOn': void;
@@ -50,17 +49,9 @@ export class KeyboardListener extends EventEmitter {
       this.altPressed = true;
     }
 
-    // CTRL + Pause - Toggle AC (appears as CANCEL when CTRL is pressed)
-    if (this.ctrlPressed && !this.altPressed && (key === 'PAUSE' || key === 'CANCEL')) {
-      this.logger.info('Toggle AC hotkey detected (CTRL+Pause)');
-      this.emit('toggle');
-      this.temperatureBuffer.length = 0;
-      return;
-    }
-
-    // ALT + Pause - Voice status (appears as PAUSE when ALT is pressed)
-    if (this.altPressed && !this.ctrlPressed && key === 'PAUSE') {
-      this.logger.info('Voice status hotkey detected (ALT+Pause)');
+    // CTRL + Numpad Period (Del) - Voice status
+    if (this.ctrlPressed && !this.altPressed && (key === 'NUMPAD DOT' || key === 'NUMPAD DELETE')) {
+      this.logger.info('Voice status hotkey detected (CTRL+Numpad Period)');
       this.emit('voiceStatus');
       this.temperatureBuffer.length = 0;
       return;
