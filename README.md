@@ -76,29 +76,6 @@ npm start
 
 ### Running at Startup
 
-#### Automated Installation (Recommended)
-
-Use the PowerShell installation script:
-
-```powershell
-# Install to Windows startup
-scripts\install-startup.ps1
-
-# Run the AC Controller in your current terminal
-scripts\install-startup.ps1 -Run
-
-# Remove from startup
-scripts\install-startup.ps1 -Uninstall
-```
-
-The script will automatically:
-- Check Node.js and install dependencies
-- Build the project
-- Create startup batch file
-- Add to Windows startup folder
-
-#### Manual Installation
-
 1. Create `start-ac-controller.bat`:
 ```batch
 @echo off
@@ -116,6 +93,8 @@ npm start
 | `CTRL + 2 + 5` | Set temperature to 25°C | Hold CTRL, press 2, then 5 on numpad |
 | `CTRL + 1 + 8` | Set temperature to 18°C | Hold CTRL, press 1, then 8 on numpad |
 | `ALT + Pause` | Voice status announcement | Press and release |
+| `CTRL + ALT + 1` | Power on | Press and release |
+| `CTRL + ALT + 0` | Power off | Press and release |
 
 ## Configuration
 
