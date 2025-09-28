@@ -4,11 +4,13 @@ Control your Sensibo AC with keyboard shortcuts on Windows. This TypeScript appl
 
 ## Features
 
-- **Toggle AC Power**: `CTRL + Pause` - Turn AC on/off
-- **Set Temperature**: `CTRL + Numpad digits` - Press two numpad digits while holding CTRL (e.g., CTRL + 2 + 5 for 25°C)
-- **Voice Status**: `ALT + Pause` - Hear the current target and room temperature via text-to-speech
-- **Automatic Retry**: Failed API calls are retried up to 3 times
-- **Logging**: All actions are logged to console and file
+| Shortcut | Action | Example |
+|----------|--------|---------|
+| `CTRL + ALT + 1` | Power on |  |
+| `CTRL + ALT + 0` | Power off |  |
+| `CTRL + 2 + 5` | Set temperature to 25°C | Hold CTRL, press 2, then 5 on numpad |
+| `CTRL + 1 + 8` | Set temperature to 18°C | Hold CTRL, press 1, then 8 on numpad |
+| `CTRL + . (del)` | Voice status announcement |  |
 
 ## Prerequisites
 
@@ -84,16 +86,6 @@ npm start
 ```
 
 2. Press `Win + R`, type `shell:startup`, and copy the batch file there
-
-## Keyboard Shortcuts
-
-| Shortcut | Action | Example |
-|----------|--------|---------|
-| `CTRL + 2 + 5` | Set temperature to 25°C | Hold CTRL, press 2, then 5 on numpad |
-| `CTRL + 1 + 8` | Set temperature to 18°C | Hold CTRL, press 1, then 8 on numpad |
-| `CTRL + . (del)` | Voice status announcement | -- |
-| `CTRL + ALT + 1` | Power on | -- |
-| `CTRL + ALT + 0` | Power off | -- |
 
 ## Configuration
 
