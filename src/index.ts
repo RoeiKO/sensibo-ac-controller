@@ -153,6 +153,8 @@ class ACController {
     logger.info('Starting AC Controller...');
     logger.info('Keyboard shortcuts:');
     logger.info('  CTRL + Pause: Toggle AC on/off');
+    logger.info('  CTRL + ALT + Numpad 1: Turn AC on (with state sync)');
+    logger.info('  CTRL + ALT + Numpad 0: Turn AC off (with state sync)');
     logger.info('  CTRL + Numpad digits (2 digits): Set temperature');
     logger.info('  ALT + Pause: Voice status announcement');
     logger.info('Press CTRL+C to exit');
@@ -220,7 +222,7 @@ class ACController {
     // Voice status
     this.keyboardListener.on('voiceStatus', async () => {
       logger.info('Voice status command received');
-      
+
       const statusResult = await this.withRetry(
         async () => {
           const [state, roomTemp] = await Promise.all([
@@ -231,12 +233,76 @@ class ACController {
         },
         'Get status'
       );
-      
+
       if (statusResult) {
         await this.voiceFeedback.announceTemperatures(
-          statusResult.state.targetTemperature, 
+          statusResult.state.targetTemperature,
           statusResult.roomTemp
         );
+      }
+    });
+
+    // Power on with state sync
+    this.keyboardListener.on('powerOn', async () => {
+      logger.info('Power on command received');
+
+      const result = await this.withRetry(
+        async () => {
+          // Get current Sensibo state
+          const currentState = await this.sensiboAPI.getCurrentState();
+
+          if (currentState.on) {
+            // If Sensibo thinks AC is on, but user wants to turn it on,
+            // it means the AC is actually off (out of sync)
+            logger.info('Sensibo state shows ON but AC is actually OFF. Syncing state...');
+            await this.sensiboAPI.syncPowerState(false);
+            // Small delay to ensure sync completes
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+
+          // Now turn the AC on
+          await this.sensiboAPI.setACState({ on: true });
+          return true;
+        },
+        'Power on with sync'
+      );
+
+      if (result) {
+        const message = 'AC turned on';
+        logger.info(message);
+        await this.voiceFeedback.announceSuccess(message);
+      }
+    });
+
+    // Power off with state sync
+    this.keyboardListener.on('powerOff', async () => {
+      logger.info('Power off command received');
+
+      const result = await this.withRetry(
+        async () => {
+          // Get current Sensibo state
+          const currentState = await this.sensiboAPI.getCurrentState();
+
+          if (!currentState.on) {
+            // If Sensibo thinks AC is off, but user wants to turn it off,
+            // it means the AC is actually on (out of sync)
+            logger.info('Sensibo state shows OFF but AC is actually ON. Syncing state...');
+            await this.sensiboAPI.syncPowerState(true);
+            // Small delay to ensure sync completes
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+
+          // Now turn the AC off
+          await this.sensiboAPI.setACState({ on: false });
+          return true;
+        },
+        'Power off with sync'
+      );
+
+      if (result) {
+        const message = 'AC turned off';
+        logger.info(message);
+        await this.voiceFeedback.announceSuccess(message);
       }
     });
   }

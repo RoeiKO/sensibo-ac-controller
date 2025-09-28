@@ -100,18 +100,44 @@ export class SensiboAPI {
           fields: '*',
         },
       });
-      
+
       const measurements: Measurement[] = response.data.result;
       if (measurements.length > 0) {
         const currentTemp = measurements[0].temperature;
         this.logger.info(`Current room temperature: ${currentTemp}°C`);
         return currentTemp;
       }
-      
+
       throw new Error('No temperature measurements available');
     } catch (error) {
       this.logger.error('Failed to get room temperature:', error);
       throw new Error(`Failed to get room temperature: ${error}`);
+    }
+  }
+
+  async syncPowerState(actualState: boolean): Promise<void> {
+    try {
+      const response = await this.client.patch(
+        `/pods/${this.config.deviceId}/acStates/on`,
+        {
+          newValue: actualState,
+          reason: 'StateCorrectionByUser',
+        },
+        {
+          params: {
+            apiKey: this.config.apiKey,
+          },
+        }
+      );
+
+      if (response.data.status === 'success') {
+        this.logger.info(`AC state synchronized to: ${actualState ? 'ON' : 'OFF'}`);
+      } else {
+        throw new Error(`API returned status: ${response.data.status}`);
+      }
+    } catch (error) {
+      this.logger.error('Failed to sync power state:', error);
+      throw new Error(`Failed to sync power state: ${error}`);
     }
   }
 }

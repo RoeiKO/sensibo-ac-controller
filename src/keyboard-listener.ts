@@ -6,6 +6,8 @@ export interface KeyboardEvents {
   'toggle': void;
   'setTemperature': number;
   'voiceStatus': void;
+  'powerOn': void;
+  'powerOff': void;
 }
 
 export class KeyboardListener extends EventEmitter {
@@ -60,6 +62,22 @@ export class KeyboardListener extends EventEmitter {
     if (this.altPressed && !this.ctrlPressed && key === 'PAUSE') {
       this.logger.info('Voice status hotkey detected (ALT+Pause)');
       this.emit('voiceStatus');
+      this.temperatureBuffer.length = 0;
+      return;
+    }
+
+    // CTRL + ALT + Numpad 1 - Turn AC on
+    if (this.ctrlPressed && this.altPressed && key === 'NUMPAD 1') {
+      this.logger.info('Turn AC on hotkey detected (CTRL+ALT+Numpad1)');
+      this.emit('powerOn');
+      this.temperatureBuffer.length = 0;
+      return;
+    }
+
+    // CTRL + ALT + Numpad 0 - Turn AC off
+    if (this.ctrlPressed && this.altPressed && key === 'NUMPAD 0') {
+      this.logger.info('Turn AC off hotkey detected (CTRL+ALT+Numpad0)');
+      this.emit('powerOff');
       this.temperatureBuffer.length = 0;
       return;
     }
